@@ -119,6 +119,11 @@ if (loginBtn) {
   loginBtn.addEventListener("click", async () => {
     try {
       getDocs(colRef).then((snapshot) => {
+        if (snapshot.docs.length === 0) {
+          console.log("Brak danych w bazie.");
+          return;
+        }
+
         let books = [];
         snapshot.docs.forEach((doc) => {
           books.push({ ...doc.data() });
@@ -126,18 +131,23 @@ if (loginBtn) {
 
         // Tolerancje dla porównań
         const tolerance = {
-          clicksId: 0, // Tolerancja dla porównywania clicks - id
-          clicksX: 0.1, // Tolerancja dla porównywania clicks - x
-          clicksY: 0.1, // Tolerancja dla porównywania clicks - y
-          timeBetween: 100, // Tolerancja dla porównywania timeBetween w milisekundach
-          totalTime: 2, // Tolerancja dla porównywania totalTime w sekundach
+          clicksX: 1000, // Tolerancja dla porównywania clicks - x
+          clicksY: 1000, // Tolerancja dla porównywania clicks - y
+          timeBetween: 2000, // Tolerancja dla porównywania timeBetween w milisekundach
+          totalTime: 100, // Tolerancja dla porównywania totalTime w sekundach
         };
+
+        // Sprawdź, czy dane kliknięć istnieją w bazie danych
+        if (!books[0]?.clicks || books[0].clicks.length === 0) {
+          console.log("Brak danych kliknięć w bazie.");
+          return;
+        }
 
         // Porównaj clicks z tolerancją
         const clicksMatch = data.clicks.every((click, index) => {
           const bookClick = books[0].clicks[index];
           return (
-            click.id === bookClick.id &&
+            String(click.id) === String(bookClick.id) &&
             Math.abs(click.x - bookClick.x) <= tolerance.clicksX &&
             Math.abs(click.y - bookClick.y) <= tolerance.clicksY
           );
@@ -145,12 +155,13 @@ if (loginBtn) {
 
         // Porównaj timeBetween z tolerancją w milisekundach
         const timeBetweenMatch =
-          Math.abs(data.timeBetween - books[0].timeBetween) <=
+          Math.abs(data.timeBetween[0] - books[0].timeBetween[0]) <=
           tolerance.timeBetween;
 
         // Porównaj totalTime z tolerancją w sekundach
         const totalTimeMatch =
-          Math.abs(data.totalTime - books[0].totalTime) <= tolerance.totalTime;
+          Math.abs(data.timeTotal[0] - books[0].totalTime[0]) <=
+          tolerance.totalTime;
 
         // Sprawdź czy wszystkie porównania są zgodne
         if (clicksMatch && timeBetweenMatch && totalTimeMatch) {
@@ -162,7 +173,7 @@ if (loginBtn) {
         console.log(books);
       });
     } catch (error) {
-      console.error("Błąd podczas dodawania danych do Firebase:", error);
+      console.error("Błąd podczas pobierania danych z Firebase:", error);
     }
   });
 }
